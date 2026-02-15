@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Globe, LogOut, Moon, Sun } from "lucide-react";
+import { Globe, Home, LogOut, Moon, Sun } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 
 function SidebarLink({ to, children }: { to: string; children: ReactNode }) {
@@ -40,7 +40,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <h1 className="text-base font-semibold tracking-tight text-foreground">GruffyGoat SEO</h1>
         </div>
         <nav className="flex-1 space-y-1 px-3 py-4">
-          <SidebarLink to="/"><Globe className="h-4 w-4" /> Sites</SidebarLink>
+          <SidebarLink to="/"><Home className="h-4 w-4" /> Welcome</SidebarLink>
+          <SidebarLink to="/sites"><Globe className="h-4 w-4" /> Sites</SidebarLink>
         </nav>
         <div className="border-t p-3 space-y-2">
           <div className="flex items-center justify-between">

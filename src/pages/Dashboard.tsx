@@ -146,7 +146,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/")}><ArrowLeft className="h-4 w-4" /></Button>
+        <Button variant="ghost" size="icon" onClick={() => navigate("/sites")}><ArrowLeft className="h-4 w-4" /></Button>
         <div>
           <h2 className="text-2xl font-bold tracking-tight">{site.site_name}</h2>
           <p className="text-sm text-muted-foreground">{site.base_url}</p>
