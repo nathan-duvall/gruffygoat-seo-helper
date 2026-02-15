@@ -9,8 +9,10 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { ArrowLeft, Search, Sparkles, FileText, Loader2, ArrowRight, Settings, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Search, Sparkles, FileText, Loader2, ArrowRight, Settings, Info } from "lucide-react";
 import WorkflowStepper from "@/components/WorkflowStepper";
 
 export default function Dashboard() {
@@ -21,7 +23,7 @@ export default function Dashboard() {
   const [scanning, setScanning] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [scanResults, setScanResults] = useState<any[] | null>(null);
-  const [dryRun, setDryRun] = useState(false);
+  const [previewOnly, setPreviewOnly] = useState(false);
   const [contentScope, setContentScope] = useState<"posts" | "pages" | "both">("both");
   const [stats, setStats] = useState({ missingTitles: 0, missingDescs: 0, missingFocus: 0, suggestions: 0 });
   const [usage, setUsage] = useState({ totalCalls: 0, totalTokens: 0, totalCost: 0 });
@@ -43,12 +45,11 @@ export default function Dashboard() {
     });
   }, [user, siteId]);
 
-  // Determine workflow step
   const getWorkflowStep = () => {
-    if (!scanResults && stats.suggestions === 0) return 0; // Analyze
-    if (scanResults && scanResults.length > 0) return 1; // Generate
-    if (stats.suggestions > 0) return 2; // Review
-    return 3; // Apply
+    if (!scanResults && stats.suggestions === 0) return 0;
+    if (scanResults && scanResults.length > 0) return 1;
+    if (stats.suggestions > 0) return 2;
+    return 3;
   };
 
   const handleScan = async () => {
@@ -85,8 +86,8 @@ export default function Dashboard() {
 
       const result = await generateSeo(batch, siteId, site.seo_plugin, existingSugs || []);
 
-      if (dryRun) {
-        toast.success(`Dry run: ${result.results.length} suggestions generated (not saved). Tokens: ~${result.tokens_used}`);
+      if (previewOnly) {
+        toast.success(`Preview: ${result.results.length} suggestions generated (not saved). Tokens: ~${result.tokens_used}`);
         setGenerating(false);
         return;
       }
@@ -145,18 +146,67 @@ export default function Dashboard() {
   if (!site) return <p className="text-muted-foreground">Loading...</p>;
 
   const currentStep = getWorkflowStep();
-  const estimatedNextCost = scanResults?.length
-    ? (Math.min(scanResults.length, site.batch_size) * 0.05).toFixed(4)
-    : "—";
+  const batchSize = site.batch_size || 5;
+  const remainingCount = scanResults?.length || 0;
+  const nextBatchCount = Math.min(remainingCount, batchSize);
 
   return (
     <div className="space-y-6">
+      {/* Header with settings gear */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate("/sites")}><ArrowLeft className="h-4 w-4" /></Button>
-        <div>
+        <div className="flex-1">
           <h2 className="text-2xl font-bold tracking-tight">{site.site_name}</h2>
           <p className="text-sm text-muted-foreground">{site.base_url}</p>
         </div>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="icon"><Settings className="h-4 w-4" /></Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Site Settings</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-6 pt-2">
+              <div className="space-y-3">
+                <p className="text-sm font-medium">Automation Mode</p>
+                <RadioGroup defaultValue="manual" className="space-y-2">
+                  <div className="flex items-center gap-3 rounded-md border p-3">
+                    <RadioGroupItem value="manual" id="modal-manual" />
+                    <Label htmlFor="modal-manual" className="flex-1 cursor-pointer">
+                      <span className="text-sm font-medium">Manual Review</span>
+                      <p className="text-xs text-muted-foreground">Review and approve each suggestion before applying.</p>
+                    </Label>
+                  </div>
+                  <div className="flex items-center gap-3 rounded-md border p-3 opacity-50">
+                    <RadioGroupItem value="auto" id="modal-auto" disabled />
+                    <Label htmlFor="modal-auto" className="flex-1">
+                      <span className="text-sm font-medium flex items-center gap-2">
+                        Auto Apply
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Coming Soon</Badge>
+                      </span>
+                      <p className="text-xs text-muted-foreground">Automatically apply generated metadata without manual review.</p>
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Batch Size</p>
+                <p className="text-xs text-muted-foreground">Current batch size: <span className="font-semibold text-foreground">{site.batch_size}</span> items per generation run.</p>
+              </div>
+
+              {site.strict_mode !== undefined && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Strict Conflict Mode</p>
+                  <p className="text-xs text-muted-foreground">
+                    {site.strict_mode ? "Enabled – conflicts will block suggestions." : "Disabled – conflicts shown as warnings only."}
+                  </p>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Workflow Stepper */}
@@ -202,8 +252,10 @@ export default function Dashboard() {
       {scanResults && scanResults.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Analysis Results</CardTitle>
-            <CardDescription>{scanResults.length} item(s) found with missing SEO metadata.</CardDescription>
+            <CardTitle className="text-base">Step 2: Generate Metadata</CardTitle>
+            <CardDescription>
+              Generating next <span className="font-semibold text-foreground">{nextBatchCount}</span> of <span className="font-semibold text-foreground">{remainingCount}</span> remaining {contentScope === "pages" ? "pages" : contentScope === "posts" ? "posts" : "posts/pages"}.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-3">
@@ -251,23 +303,33 @@ export default function Dashboard() {
                   <>Next Step <ArrowRight className="h-4 w-4" /> Generate Metadata</>
                 )}
               </Button>
-              <div className="flex items-center gap-2">
-                <Switch checked={dryRun} onCheckedChange={setDryRun} />
-                <Label className="text-sm">Dry Run</Label>
-              </div>
+              <TooltipProvider>
+                <div className="flex items-center gap-2">
+                  <Switch checked={previewOnly} onCheckedChange={setPreviewOnly} />
+                  <Label className="text-sm">Preview Only</Label>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs text-xs">
+                      Preview Only generates AI metadata suggestions but does not save them to the database and does not send anything to WordPress. Use this to test results before committing.
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </TooltipProvider>
               <p className="text-xs text-muted-foreground">
-                Est. cost for next batch ({Math.min(scanResults.length, site.batch_size)} items): ~${estimatedNextCost}
+                Estimated AI cost for next batch: &lt; $0.01
               </p>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Step 2+: Review Queue CTA */}
-      {(currentStep >= 2 || stats.suggestions > 0) && (
+      {/* Review Queue CTA – only if suggestions exist */}
+      {stats.suggestions > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Review & Apply</CardTitle>
+            <CardTitle className="text-base">Step 3: Review & Apply</CardTitle>
             <CardDescription>
               {stats.suggestions} suggestion(s) ready for review. Approve items before applying to WordPress.
             </CardDescription>
@@ -276,17 +338,15 @@ export default function Dashboard() {
             <Button onClick={() => navigate(`/site/${siteId}/review`)}>
               <FileText className="h-4 w-4" /> Open Review Queue <ArrowRight className="h-4 w-4" />
             </Button>
-            {currentStep < 2 && (
-              <Button variant="outline" onClick={handleScan} disabled={scanning}>
-                <Search className="h-4 w-4" /> Re-Analyze
-              </Button>
-            )}
+            <Button variant="outline" onClick={handleScan} disabled={scanning}>
+              <Search className="h-4 w-4" /> Re-Analyze
+            </Button>
           </CardContent>
         </Card>
       )}
 
-      {/* Re-analyze button when on step 2+ and no scan results */}
-      {currentStep >= 2 && !scanResults && (
+      {/* Re-analyze when on step 2+ with no scan results and no suggestions to show review for */}
+      {currentStep >= 2 && !scanResults && stats.suggestions === 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Continue Analyzing</CardTitle>
@@ -324,39 +384,6 @@ export default function Dashboard() {
           <div><p className="text-sm text-muted-foreground">Total Calls</p><p className="text-xl font-semibold">{usage.totalCalls}</p></div>
           <div><p className="text-sm text-muted-foreground">Est. Tokens</p><p className="text-xl font-semibold">{usage.totalTokens.toLocaleString()}</p></div>
           <div><p className="text-sm text-muted-foreground">Est. Cost</p><p className="text-xl font-semibold">${usage.totalCost.toFixed(4)}</p></div>
-        </CardContent>
-      </Card>
-
-      {/* Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Settings className="h-4 w-4" /> Settings
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-3">
-            <p className="text-sm font-medium">Automation Mode</p>
-            <RadioGroup defaultValue="manual" className="space-y-2">
-              <div className="flex items-center gap-3 rounded-md border p-3">
-                <RadioGroupItem value="manual" id="manual" />
-                <Label htmlFor="manual" className="flex-1 cursor-pointer">
-                  <span className="text-sm font-medium">Manual Review</span>
-                  <p className="text-xs text-muted-foreground">Review and approve each suggestion before applying.</p>
-                </Label>
-              </div>
-              <div className="flex items-center gap-3 rounded-md border p-3 opacity-50">
-                <RadioGroupItem value="auto" id="auto" disabled />
-                <Label htmlFor="auto" className="flex-1">
-                  <span className="text-sm font-medium flex items-center gap-2">
-                    Auto Apply
-                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Coming Soon</Badge>
-                  </span>
-                  <p className="text-xs text-muted-foreground">Automatically apply generated metadata without manual review.</p>
-                </Label>
-              </div>
-            </RadioGroup>
-          </div>
         </CardContent>
       </Card>
     </div>
