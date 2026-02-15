@@ -10,6 +10,7 @@ import Welcome from "@/pages/Welcome";
 import Sites from "@/pages/Sites";
 import Dashboard from "@/pages/Dashboard";
 import ReviewQueue from "@/pages/ReviewQueue";
+import GlobalSettings from "@/pages/GlobalSettings";
 import NotFound from "./pages/NotFound";
 import { ReactNode } from "react";
 
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/sites" element={<ProtectedRoute><Sites /></ProtectedRoute>} />
             <Route path="/site/:siteId" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/site/:siteId/review" element={<ProtectedRoute><ReviewQueue /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><GlobalSettings /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
