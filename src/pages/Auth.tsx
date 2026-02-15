@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { useTheme } from "@/hooks/useTheme";
 import { Moon, Sun } from "lucide-react";
 import ggLightLogin from "@/assets/gg-light-login.png";
+import ggDarkLogin from "@/assets/gg-dark-login.png";
 
 export default function Auth() {
   const { user, loading } = useAuth();
@@ -41,7 +42,7 @@ export default function Auth() {
       </Button>
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <img src={ggLightLogin} alt="GruffyGoat" className="mx-auto h-12 w-auto" />
+          <img src={theme === "dark" ? ggDarkLogin : ggLightLogin} alt="GruffyGoat" className="mx-auto h-12 w-auto" />
           <CardDescription>AI-powered SEO metadata tool</CardDescription>
         </CardHeader>
         <CardContent>
