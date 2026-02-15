@@ -15,8 +15,8 @@ export async function testConnection(baseUrl: string, username: string, appPassw
   });
 }
 
-export async function scanSite(siteId: string) {
-  return callEdgeFunction("wordpress-proxy", { action: "scan", site_id: siteId });
+export async function scanSite(siteId: string, contentScope: "posts" | "pages" | "both" = "both") {
+  return callEdgeFunction("wordpress-proxy", { action: "scan", site_id: siteId, content_scope: contentScope });
 }
 
 export async function generateSeo(items: any[], siteId: string, seoPlugin: string, existingSuggestions: any[] = []) {
