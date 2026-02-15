@@ -28,17 +28,34 @@ async function wpFetch(creds: SiteCredentials, path: string, options: RequestIni
 }
 
 async function getSiteCredentials(supabase: any, siteId: string, userId: string): Promise<SiteCredentials & { seo_plugin: string; strict_mode: boolean; batch_size: number }> {
-  const { data: site, error } = await supabase
+  // Use service role to access encrypted password column
+  const supabaseAdmin = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
+
+  const { data: site, error } = await supabaseAdmin
     .from("sites")
     .select("*")
     .eq("id", siteId)
     .eq("user_id", userId)
     .single();
   if (error || !site) throw new Error("Site not found or access denied");
+
+  // Decrypt the password
+  const encryptionKey = Deno.env.get("WP_ENCRYPTION_KEY");
+  if (!encryptionKey) throw new Error("Encryption key not configured");
+
+  const { data: decrypted, error: decErr } = await supabaseAdmin.rpc("decrypt_app_password", {
+    encrypted_password: site.app_password_encrypted,
+    encryption_key: encryptionKey,
+  });
+  if (decErr) throw new Error(`Decryption failed: ${decErr.message}`);
+
   return {
     base_url: site.base_url,
     username: site.username,
-    app_password: site.app_password_encrypted, // stored as plain text for alpha
+    app_password: decrypted,
     seo_plugin: site.seo_plugin,
     strict_mode: site.strict_mode,
     batch_size: site.batch_size,
