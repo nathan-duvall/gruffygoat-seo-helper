@@ -91,7 +91,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       {/* Header */}
       <div className={cn("flex h-14 items-center border-b", collapsed ? "justify-center px-2" : "px-4")}>
         {!collapsed && (
-          <img src={theme === "dark" ? ggDark : ggLight} alt="GruffyGoat" className="h-8 w-auto" />
+          <img src={theme === "dark" ? ggDark : ggLight} alt="GruffyGoat" className="h-10 w-auto" />
         )}
         {isMobile && (
           <Button variant="ghost" size="icon" className="h-8 w-8 ml-auto" onClick={() => setMobileOpen(false)}>
