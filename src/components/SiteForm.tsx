@@ -5,8 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { testConnection } from "@/lib/api";
-import { supabase } from "@/integrations/supabase/client";
+import { testConnection, createSite, updateSite } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { CheckCircle, XCircle, Loader2, Info } from "lucide-react";
@@ -53,7 +52,7 @@ export default function SiteForm({ onSaved, initialData }: SiteFormProps) {
 
   const handleSave = async () => {
     if (!user) return;
-    if (!siteName || !baseUrl || !username || !appPassword) {
+    if (!siteName || !baseUrl || !username || (!appPassword && !initialData)) {
       toast.error("All fields are required.");
       return;
     }
@@ -72,21 +71,18 @@ export default function SiteForm({ onSaved, initialData }: SiteFormProps) {
           strict_mode: strictMode,
           batch_size: batchSize,
         };
-        if (appPassword) updateData.app_password_encrypted = appPassword;
-        const { error } = await supabase.from("sites").update(updateData).eq("id", initialData.id);
-        if (error) throw error;
+        if (appPassword) updateData.app_password = appPassword;
+        await updateSite(initialData.id, updateData);
       } else {
-        const { error } = await supabase.from("sites").insert({
-          user_id: user.id,
+        await createSite({
           site_name: siteName,
           base_url: baseUrl,
           username,
-          app_password_encrypted: appPassword,
+          app_password: appPassword,
           seo_plugin: seoPlugin,
           strict_mode: strictMode,
           batch_size: batchSize,
         });
-        if (error) throw error;
       }
       toast.success("Site saved!");
       onSaved();

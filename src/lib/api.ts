@@ -35,3 +35,27 @@ export async function applySuggestion(siteId: string, suggestionId: string) {
     suggestion_id: suggestionId,
   });
 }
+
+export async function createSite(siteData: {
+  site_name: string;
+  base_url: string;
+  username: string;
+  app_password: string;
+  seo_plugin: string;
+  strict_mode: boolean;
+  batch_size: number;
+}) {
+  return callEdgeFunction("site-management", { action: "create", ...siteData });
+}
+
+export async function updateSite(siteId: string, siteData: {
+  site_name?: string;
+  base_url?: string;
+  username?: string;
+  app_password?: string;
+  seo_plugin?: string;
+  strict_mode?: boolean;
+  batch_size?: number;
+}) {
+  return callEdgeFunction("site-management", { action: "update", site_id: siteId, ...siteData });
+}
