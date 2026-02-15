@@ -103,11 +103,15 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         <TooltipProvider delayDuration={0}>
           <SidebarLink to="/" icon={<Home className="h-4 w-4 shrink-0" />} label="Welcome" collapsed={collapsed} />
           <SidebarLink to="/sites" icon={<Globe className="h-4 w-4 shrink-0" />} label="Sites" collapsed={collapsed} />
-          <SidebarLink to="/settings" icon={<Settings className="h-4 w-4 shrink-0" />} label="Global Settings" collapsed={collapsed} />
         </TooltipProvider>
       </nav>
 
-      {/* Version footer */}
+      {/* Settings + Version footer */}
+      <div className={cn(collapsed ? "px-0 flex flex-col items-center space-y-2 py-2" : "px-3 space-y-1")}>
+        <TooltipProvider delayDuration={0}>
+          <SidebarLink to="/settings" icon={<Settings className="h-4 w-4 shrink-0" />} label="Global Settings" collapsed={collapsed} />
+        </TooltipProvider>
+      </div>
       {!collapsed && (
         <div className="px-4 py-3 border-t border-b">
           <p className="text-[11px] font-medium text-muted-foreground">GruffyGoat SEO</p>
