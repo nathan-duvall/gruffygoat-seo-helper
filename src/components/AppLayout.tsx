@@ -7,6 +7,8 @@ import { useTheme } from "@/hooks/useTheme";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import ggLight from "@/assets/gg-light.png";
+import ggDark from "@/assets/gg-dark-login.png";
 
 const SIDEBAR_KEY = "sidebar-collapsed";
 
@@ -89,7 +91,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       {/* Header */}
       <div className={cn("flex h-14 items-center border-b", collapsed ? "justify-center px-2" : "px-4")}>
         {!collapsed && (
-          <h1 className="text-base font-semibold tracking-tight text-foreground truncate">GruffyGoat SEO</h1>
+          <img src={theme === "dark" ? ggDark : ggLight} alt="GruffyGoat" className="h-8 w-auto" />
         )}
         {isMobile && (
           <Button variant="ghost" size="icon" className="h-8 w-8 ml-auto" onClick={() => setMobileOpen(false)}>
@@ -186,7 +188,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setMobileOpen(true)}>
               <PanelLeft className="h-4 w-4" />
             </Button>
-            <span className="ml-2 text-base font-semibold tracking-tight text-foreground">GruffyGoat SEO</span>
+            <img src={theme === "dark" ? ggDark : ggLight} alt="GruffyGoat" className="ml-2 h-7 w-auto" />
           </header>
           <div className="mx-auto max-w-6xl px-4 py-6">
             {children}
