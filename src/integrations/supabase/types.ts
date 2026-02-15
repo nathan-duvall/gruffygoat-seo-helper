@@ -50,13 +50,6 @@ export type Database = {
             referencedRelation: "sites"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "api_usage_site_id_fkey"
-            columns: ["site_id"]
-            isOneToOne: false
-            referencedRelation: "sites_safe"
-            referencedColumns: ["id"]
-          },
         ]
       }
       profiles: {
@@ -126,13 +119,6 @@ export type Database = {
             columns: ["site_id"]
             isOneToOne: false
             referencedRelation: "sites"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "seo_logs_site_id_fkey"
-            columns: ["site_id"]
-            isOneToOne: false
-            referencedRelation: "sites_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -248,53 +234,11 @@ export type Database = {
             referencedRelation: "sites"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "suggestions_site_id_fkey"
-            columns: ["site_id"]
-            isOneToOne: false
-            referencedRelation: "sites_safe"
-            referencedColumns: ["id"]
-          },
         ]
       }
     }
     Views: {
-      sites_safe: {
-        Row: {
-          base_url: string | null
-          batch_size: number | null
-          created_at: string | null
-          id: string | null
-          seo_plugin: string | null
-          site_name: string | null
-          strict_mode: boolean | null
-          user_id: string | null
-          username: string | null
-        }
-        Insert: {
-          base_url?: string | null
-          batch_size?: number | null
-          created_at?: string | null
-          id?: string | null
-          seo_plugin?: string | null
-          site_name?: string | null
-          strict_mode?: boolean | null
-          user_id?: string | null
-          username?: string | null
-        }
-        Update: {
-          base_url?: string | null
-          batch_size?: number | null
-          created_at?: string | null
-          id?: string | null
-          seo_plugin?: string | null
-          site_name?: string | null
-          strict_mode?: boolean | null
-          user_id?: string | null
-          username?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       decrypt_app_password: {
