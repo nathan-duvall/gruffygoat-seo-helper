@@ -7,6 +7,20 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// --- Input Validation Helpers ---
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const VALID_ACTIONS = ["test-connection", "scan", "apply"];
+const VALID_SCOPES = ["posts", "pages", "both"];
+
+function validateUUID(id: unknown): id is string {
+  return typeof id === "string" && UUID_REGEX.test(id);
+}
+
+function badRequest(msg: string) {
+  return new Response(JSON.stringify({ error: msg }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+}
+
+// --- WordPress Helpers ---
 interface SiteCredentials {
   base_url: string;
   username: string;
@@ -27,8 +41,7 @@ async function wpFetch(creds: SiteCredentials, path: string, options: RequestIni
   return resp;
 }
 
-async function getSiteCredentials(supabase: any, siteId: string, userId: string): Promise<SiteCredentials & { seo_plugin: string; strict_mode: boolean; batch_size: number }> {
-  // Use service role to access encrypted password column
+async function getSiteCredentials(siteId: string, userId: string): Promise<SiteCredentials & { seo_plugin: string; strict_mode: boolean; batch_size: number }> {
   const supabaseAdmin = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -42,7 +55,6 @@ async function getSiteCredentials(supabase: any, siteId: string, userId: string)
     .single();
   if (error || !site) throw new Error("Site not found or access denied");
 
-  // Decrypt the password
   const encryptionKey = Deno.env.get("WP_ENCRYPTION_KEY");
   if (!encryptionKey) throw new Error("Encryption key not configured");
 
@@ -50,7 +62,7 @@ async function getSiteCredentials(supabase: any, siteId: string, userId: string)
     encrypted_password: site.app_password_encrypted,
     encryption_key: encryptionKey,
   });
-  if (decErr) throw new Error(`Decryption failed: ${decErr.message}`);
+  if (decErr) throw new Error("Failed to retrieve site credentials");
 
   return {
     base_url: site.base_url,
@@ -86,36 +98,48 @@ serve(async (req) => {
 
     const { action, ...params } = await req.json();
 
+    // Validate action
+    if (typeof action !== "string" || !VALID_ACTIONS.includes(action)) {
+      return badRequest("Invalid action");
+    }
+
     if (action === "test-connection") {
       const { base_url, username, app_password } = params;
-      if (!base_url || !username || !app_password) {
-        return new Response(JSON.stringify({ error: "Missing credentials" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (typeof base_url !== "string" || !base_url.startsWith("https://") || base_url.length > 500) {
+        return badRequest("Invalid base_url. Must be HTTPS and under 500 characters.");
+      }
+      if (typeof username !== "string" || username.length === 0 || username.length > 100) {
+        return badRequest("Invalid username.");
+      }
+      if (typeof app_password !== "string" || app_password.length === 0 || app_password.length > 200) {
+        return badRequest("Invalid app_password.");
       }
       const creds: SiteCredentials = { base_url, username, app_password };
       try {
-        // Test REST availability
         const rootResp = await wpFetch(creds, "/wp/v2");
         if (!rootResp.ok) {
           return new Response(JSON.stringify({ success: false, error: `REST API returned ${rootResp.status}. Ensure the WordPress REST API is enabled.` }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
-        // Test auth by fetching 1 post
         const postResp = await wpFetch(creds, "/wp/v2/posts?per_page=1&context=edit");
         if (postResp.status === 401 || postResp.status === 403) {
           return new Response(JSON.stringify({ success: false, error: "Authentication failed. Check your username and application password. Ensure the user has admin privileges." }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
         if (!postResp.ok) {
-          return new Response(JSON.stringify({ success: false, error: `Could not fetch posts: ${postResp.status}` }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          return new Response(JSON.stringify({ success: false, error: `Could not fetch posts. Status: ${postResp.status}` }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
         const posts = await postResp.json();
         return new Response(JSON.stringify({ success: true, message: `Connected successfully. Found ${posts.length} post(s).` }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       } catch (e) {
-        return new Response(JSON.stringify({ success: false, error: `Connection failed: ${e instanceof Error ? e.message : "Network error"}. Ensure the URL is correct and HTTPS.` }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ success: false, error: "Connection failed. Ensure the URL is correct and HTTPS." }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
     }
 
     if (action === "scan") {
       const { site_id, content_scope } = params;
-      const site = await getSiteCredentials(supabase, site_id, userId);
+      if (!validateUUID(site_id)) return badRequest("Invalid site_id format.");
+      const scope = VALID_SCOPES.includes(content_scope) ? content_scope : "both";
+
+      const site = await getSiteCredentials(site_id, userId);
       const creds: SiteCredentials = { base_url: site.base_url, username: site.username, app_password: site.app_password };
 
       const metaKeys = site.seo_plugin === "yoast"
@@ -123,11 +147,8 @@ serve(async (req) => {
         : ["rank_math_title", "rank_math_description", "rank_math_focus_keyword"];
 
       const allItems: any[] = [];
-
       const MAX_PAGES = 2;
       const PER_PAGE = 20;
-
-      const scope = content_scope || "both";
       const postTypes = scope === "posts" ? ["posts"] : scope === "pages" ? ["pages"] : ["posts", "pages"];
 
       for (const postType of postTypes) {
@@ -170,11 +191,13 @@ serve(async (req) => {
     }
 
     if (action === "apply") {
-      const { site_id, suggestion_id, fields } = params;
-      const site = await getSiteCredentials(supabase, site_id, userId);
+      const { site_id, suggestion_id } = params;
+      if (!validateUUID(site_id)) return badRequest("Invalid site_id format.");
+      if (!validateUUID(suggestion_id)) return badRequest("Invalid suggestion_id format.");
+
+      const site = await getSiteCredentials(site_id, userId);
       const creds: SiteCredentials = { base_url: site.base_url, username: site.username, app_password: site.app_password };
 
-      // Get suggestion
       const { data: suggestion, error: sugError } = await supabase
         .from("suggestions")
         .select("*")
@@ -206,7 +229,6 @@ serve(async (req) => {
         return new Response(JSON.stringify({ success: true, message: "No blank fields to update" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // Apply to WordPress
       const resp = await wpFetch(creds, `/wp/v2/${suggestion.post_type === "page" ? "pages" : "posts"}/${suggestion.post_id}`, {
         method: "POST",
         body: JSON.stringify({ meta: metaUpdate }),
@@ -214,19 +236,18 @@ serve(async (req) => {
 
       if (!resp.ok) {
         const errText = await resp.text();
-        // Log failure
+        console.error(`WP write failed for post ${suggestion.post_id}:`, errText);
         for (const [key, val] of Object.entries(metaUpdate)) {
           await supabase.from("seo_logs").insert({
             site_id, user_id: userId, post_id: suggestion.post_id,
             field_key: key, old_value: existingMeta[key] || "", new_value: val,
-            result: "failed", message: `WP write failed: ${resp.status} - ${errText.substring(0, 200)}`,
+            result: "failed", message: `WordPress write failed (status ${resp.status})`,
           });
         }
-        await supabase.from("suggestions").update({ status: "error", error_code: "WP_WRITE_FAILED", error_message: errText.substring(0, 500) }).eq("id", suggestion_id);
-        return new Response(JSON.stringify({ success: false, error: `WordPress write failed: ${resp.status}` }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        await supabase.from("suggestions").update({ status: "error", error_code: "WP_WRITE_FAILED", error_message: "WordPress write failed" }).eq("id", suggestion_id);
+        return new Response(JSON.stringify({ success: false, error: "WordPress write failed. Check site connection and permissions." }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // Verify
       const verifyResp = await wpFetch(creds, `/wp/v2/${suggestion.post_type === "page" ? "pages" : "posts"}/${suggestion.post_id}?context=edit`);
       if (verifyResp.ok) {
         const verified = await verifyResp.json();
@@ -238,7 +259,7 @@ serve(async (req) => {
             site_id, user_id: userId, post_id: suggestion.post_id,
             field_key: key, old_value: existingMeta[key] || "", new_value: val,
             result: wrote ? "success" : "verification_failed",
-            message: wrote ? "Verified" : `Expected "${val}", got "${vMeta[key] || ""}"`,
+            message: wrote ? "Verified" : "Field value mismatch after write",
           });
           if (!wrote) allVerified = false;
         }
@@ -246,14 +267,14 @@ serve(async (req) => {
         await supabase.from("suggestions").update({ status: newStatus, error_code: allVerified ? null : "VERIFY_FAILED", error_message: allVerified ? null : "One or more fields did not verify" }).eq("id", suggestion_id);
         return new Response(JSON.stringify({ success: allVerified, status: newStatus }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       } else {
-        await supabase.from("suggestions").update({ status: "verification_failed", error_code: "VERIFY_FAILED", error_message: "Could not re-fetch post for verification" }).eq("id", suggestion_id);
-        return new Response(JSON.stringify({ success: false, error: "Verification fetch failed" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        await supabase.from("suggestions").update({ status: "verification_failed", error_code: "VERIFY_FAILED", error_message: "Could not verify post after write" }).eq("id", suggestion_id);
+        return new Response(JSON.stringify({ success: false, error: "Verification failed" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
     }
 
-    return new Response(JSON.stringify({ error: `Unknown action: ${action}` }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return badRequest("Invalid action");
   } catch (e) {
     console.error("wordpress-proxy error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: "An internal error occurred. Please try again." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
