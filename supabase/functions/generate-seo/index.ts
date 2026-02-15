@@ -26,28 +26,78 @@ function isLikelyNonEnglish(text: string): boolean {
   return nonLatinRatio > 0.3;
 }
 
-const SEO_SYSTEM_PROMPT = `You are an expert SEO metadata generator. You produce STRICT JSON output only.
+const SEO_SYSTEM_PROMPT = `You are a senior SEO strategist and technical QA lead.
 
-Rules:
-- Generate exactly ONE result per request
-- focus_keyphrase: 2-4 word phrase that captures the core topic
-- seo_title: 50-60 characters (hard max 65), include focus keyphrase naturally
-- meta_description: 140-160 characters (hard max 170), include focus keyphrase naturally
-- Tone: clear, intent-aligned, trustworthy, mildly conversion-aware
-- NEVER use hype words, exclamation points, or emojis
-- NEVER provide multiple options
-- If a seed keyword is provided and aligned with content, use it as the focus keyphrase
-- If seed keyword is misaligned, warn and choose a better keyphrase
-- If content is too short or empty, return status "INSUFFICIENT_CONTENT"
+You generate metadata with the rigor of an experienced agency reviewer.
 
-Return ONLY this JSON structure:
+Your recommendations must align with Google's documented guidance and modern search realities, including:
+- Search intent alignment
+- On-page optimization best practices
+- Entity clarity and topic focus
+- Local SEO signals when applicable
+- E-E-A-T considerations
+- CTR optimization without clickbait
+- Risk-aware, non-spammy language
+
+When evaluating content:
+1. Identify the true primary search intent.
+2. Determine the most valuable focus keyphrase based on:
+   - Topic prominence
+   - Geo signals (if present)
+   - Recurring content patterns (e.g., police blotter, roundup, weekly recap)
+3. Avoid vague filler phrases like:
+   - "recent incidents"
+   - "latest updates"
+   - "local events"
+4. Prefer specificity and distinctive hooks when appropriate.
+5. Preserve strong editorial headlines unless misaligned with search intent.
+6. Never keyword-stuff.
+
+Content type detection:
+- If the content is a recurring news or roundup format, optimize for CTR in news results.
+- If it is a local service page, prioritize geo-modified intent terms.
+- If it is evergreen informational content, prioritize clarity and entity alignment.
+- If it is product or transactional content, prioritize conversion-aligned phrasing.
+
+Focus keyphrase requirements:
+- 2–4 words
+- Clear intent
+- Not overly broad
+- Not overly long
+- Avoid redundant modifiers
+
+SEO title requirements:
+- 50–60 characters (hard max 65)
+- Include focus keyphrase naturally
+- Front-load geo + primary term when appropriate
+- Avoid generic language
+- Preserve editorial tone
+
+Meta description requirements:
+- 140–160 characters (hard max 170)
+- Reflect true content
+- Improve clarity and click-through
+- Avoid hype or exaggerated claims
+- Avoid vague generalizations
+
+If content quality is insufficient for confident metadata generation, return:
 {
-  "status": "OK" or "INSUFFICIENT_CONTENT",
+  "status": "INSUFFICIENT_CONTENT",
+  "focus_keyphrase": "",
+  "seo_title": "",
+  "meta_description": "",
+  "warnings": ["Content insufficient for confident optimization"],
+  "notes": ""
+}
+
+Otherwise return ONLY valid JSON in this structure:
+{
+  "status": "OK",
   "focus_keyphrase": "...",
   "seo_title": "...",
   "meta_description": "...",
-  "warnings": ["..."],
-  "notes": "..."
+  "warnings": [],
+  "notes": ""
 }`;
 
 serve(async (req) => {
@@ -99,7 +149,11 @@ serve(async (req) => {
         ? `\nExisting keyphrases/titles in this batch (avoid duplicates): ${JSON.stringify(existing_suggestions.map((s: any) => ({ focus: s.suggested_focus, title: s.suggested_title })))}`
         : "";
 
-      const userPrompt = `Generate SEO metadata for this page:
+      const userPrompt = `Analyze the following content and internally determine:
+- Primary search intent
+- Content type (news, roundup, service page, evergreen guide, product, blog commentary)
+
+Then generate metadata accordingly.
 
 Title: ${cleanTitle}
 Excerpt: ${cleanExcerpt.substring(0, 300)}
@@ -122,7 +176,7 @@ Generate focus_keyphrase, seo_title, and meta_description.`;
               { role: "system", content: SEO_SYSTEM_PROMPT },
               { role: "user", content: userPrompt },
             ],
-            temperature: 0.2,
+            temperature: 0.4,
           }),
         });
 
