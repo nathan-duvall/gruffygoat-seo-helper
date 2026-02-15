@@ -162,10 +162,10 @@ export default function Dashboard() {
 
       <div className="flex flex-wrap items-center gap-3">
         <Button onClick={handleScan} disabled={scanning}>
-          {scanning ? <><Loader2 className="h-4 w-4 animate-spin" /> Scanning...</> : <><Search className="h-4 w-4" /> Scan Site</>}
+          {scanning ? <><Loader2 className="h-4 w-4 animate-spin" /> Analyzing...</> : <><Search className="h-4 w-4" /> Analyze Site</>}
         </Button>
         <Button onClick={handleGenerate} disabled={generating || !scanResults?.length} variant="secondary">
-          {generating ? <><Loader2 className="h-4 w-4 animate-spin" /> Generating...</> : <><Sparkles className="h-4 w-4" /> Generate Suggestions</>}
+          {generating ? <><Loader2 className="h-4 w-4 animate-spin" /> Generating...</> : <><Sparkles className="h-4 w-4" /> Generate Metadata</>}
         </Button>
         <Button variant="outline" onClick={() => navigate(`/site/${siteId}/review`)}>
           <FileText className="h-4 w-4" /> Review Queue

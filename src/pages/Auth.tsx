@@ -34,8 +34,8 @@ export default function Auth() {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold tracking-tight">GG SEO Autofill (AI)</CardTitle>
-          <CardDescription>Internal SEO metadata tool for GruffyGoat</CardDescription>
+          <CardTitle className="text-2xl font-bold tracking-tight">GruffyGoat SEO</CardTitle>
+          <CardDescription>AI-powered SEO metadata tool</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
