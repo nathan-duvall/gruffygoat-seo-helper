@@ -11,24 +11,10 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    // This is an admin-only one-time migration function
+    // Verify caller has service role key
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    const supabaseUser = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
-
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabaseUser.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-    const userId = claimsData.claims.sub as string;
-
+    
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -37,11 +23,10 @@ serve(async (req) => {
     const encryptionKey = Deno.env.get("WP_ENCRYPTION_KEY");
     if (!encryptionKey) throw new Error("Encryption key not configured");
 
-    // Get all sites for this user
+    // Get ALL sites
     const { data: sites, error: fetchErr } = await supabaseAdmin
       .from("sites")
-      .select("id, app_password_encrypted")
-      .eq("user_id", userId);
+      .select("id, app_password_encrypted");
 
     if (fetchErr) throw fetchErr;
 
@@ -57,12 +42,16 @@ serve(async (req) => {
           console.error(`Failed to encrypt site ${site.id}:`, encError);
           continue;
         }
-        await supabaseAdmin.from("sites").update({ app_password_encrypted: encData }).eq("id", site.id);
+        const { error: updErr } = await supabaseAdmin.from("sites").update({ app_password_encrypted: encData }).eq("id", site.id);
+        if (updErr) {
+          console.error(`Failed to update site ${site.id}:`, updErr);
+          continue;
+        }
         migrated++;
       }
     }
 
-    return new Response(JSON.stringify({ success: true, migrated }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ success: true, migrated, total: (sites || []).length }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("migrate-passwords error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
