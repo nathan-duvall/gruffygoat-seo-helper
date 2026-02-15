@@ -29,7 +29,7 @@ function SidebarLink({
       className={({ isActive }) =>
         cn(
           "flex items-center rounded-md text-sm font-medium transition-colors",
-          collapsed ? "justify-center w-full aspect-square max-w-[40px] mx-auto py-2" : "gap-2.5 px-3 py-2",
+          collapsed ? "justify-center px-0 py-2" : "gap-2.5 px-3 py-2",
           isActive
             ? "bg-primary/10 text-primary"
             : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
@@ -99,7 +99,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       </div>
 
       {/* Nav */}
-      <nav className={cn("flex-1 space-y-1 py-4", collapsed ? "px-1" : "px-3")}>
+      <nav className={cn("flex-1 space-y-1 py-4", collapsed ? "px-0 flex flex-col items-center" : "px-3")}>
         <TooltipProvider delayDuration={0}>
           <SidebarLink to="/" icon={<Home className="h-4 w-4 shrink-0" />} label="Welcome" collapsed={collapsed} />
           <SidebarLink to="/sites" icon={<Globe className="h-4 w-4 shrink-0" />} label="Sites" collapsed={collapsed} />
