@@ -29,7 +29,7 @@ function SidebarLink({
       className={({ isActive }) =>
         cn(
           "flex items-center rounded-md text-sm font-medium transition-colors",
-          collapsed ? "justify-center px-0 py-2" : "gap-2.5 px-3 py-2",
+          collapsed ? "justify-center h-8 w-8" : "gap-2.5 px-3 py-2",
           isActive
             ? "bg-primary/10 text-primary"
             : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
