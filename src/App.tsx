@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import AppLayout from "@/components/AppLayout";
 import Auth from "@/pages/Auth";
+import Welcome from "@/pages/Welcome";
 import Sites from "@/pages/Sites";
 import Dashboard from "@/pages/Dashboard";
 import ReviewQueue from "@/pages/ReviewQueue";
@@ -30,7 +31,8 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/auth" element={<Auth />} />
-            <Route path="/" element={<ProtectedRoute><Sites /></ProtectedRoute>} />
+            <Route path="/" element={<ProtectedRoute><Welcome /></ProtectedRoute>} />
+            <Route path="/sites" element={<ProtectedRoute><Sites /></ProtectedRoute>} />
             <Route path="/site/:siteId" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/site/:siteId/review" element={<ProtectedRoute><ReviewQueue /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
