@@ -7,6 +7,19 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// --- Input Validation ---
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const VALID_SEO_PLUGINS = ["yoast", "rankmath"];
+const MAX_ITEMS = 50;
+
+function validateUUID(id: unknown): id is string {
+  return typeof id === "string" && UUID_REGEX.test(id);
+}
+
+function badRequest(msg: string) {
+  return new Response(JSON.stringify({ error: msg }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+}
+
 function stripHtml(html: string): string {
   return html
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
@@ -123,6 +136,28 @@ serve(async (req) => {
     const userId = claimsData.claims.sub as string;
 
     const { items, site_id, seo_plugin, existing_suggestions } = await req.json();
+
+    // --- Validate inputs ---
+    if (!validateUUID(site_id)) return badRequest("Invalid site_id format.");
+    if (typeof seo_plugin !== "string" || !VALID_SEO_PLUGINS.includes(seo_plugin)) {
+      return badRequest("Invalid seo_plugin. Must be 'yoast' or 'rankmath'.");
+    }
+    if (!Array.isArray(items) || items.length === 0) {
+      return badRequest("Items must be a non-empty array.");
+    }
+    if (items.length > MAX_ITEMS) {
+      return badRequest(`Too many items. Maximum is ${MAX_ITEMS}.`);
+    }
+    // Validate each item has required fields
+    for (const item of items) {
+      if (typeof item.post_id !== "number" || item.post_id <= 0) {
+        return badRequest("Each item must have a valid numeric post_id.");
+      }
+    }
+    if (existing_suggestions !== undefined && !Array.isArray(existing_suggestions)) {
+      return badRequest("existing_suggestions must be an array.");
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("AI API key not configured");
 
@@ -144,9 +179,9 @@ serve(async (req) => {
       }
 
       const contentDigest = cleanContent.substring(0, 2000);
-      const seedNote = item.seed_keyword ? `\nSeed keyword provided by user: "${item.seed_keyword}"` : "";
+      const seedNote = item.seed_keyword ? `\nSeed keyword provided by user: "${String(item.seed_keyword).substring(0, 100)}"` : "";
       const existingNote = existing_suggestions?.length
-        ? `\nExisting keyphrases/titles in this batch (avoid duplicates): ${JSON.stringify(existing_suggestions.map((s: any) => ({ focus: s.suggested_focus, title: s.suggested_title })))}`
+        ? `\nExisting keyphrases/titles in this batch (avoid duplicates): ${JSON.stringify(existing_suggestions.slice(0, 100).map((s: any) => ({ focus: s.suggested_focus, title: s.suggested_title })))}`
         : "";
 
       const userPrompt = `Analyze the following content and internally determine:
@@ -189,8 +224,8 @@ Generate focus_keyphrase, seo_title, and meta_description.`;
             results.push({ post_id: item.post_id, status: "error", error_code: "PAYMENT_REQUIRED", error_message: "AI usage credits exhausted." });
             continue;
           }
-          const errText = await aiResp.text();
-          results.push({ post_id: item.post_id, status: "error", error_code: "AI_ERROR", error_message: errText.substring(0, 300) });
+          console.error(`AI API error for post ${item.post_id}: status ${aiResp.status}`);
+          results.push({ post_id: item.post_id, status: "error", error_code: "AI_ERROR", error_message: "AI service error. Please try again." });
           continue;
         }
 
@@ -198,10 +233,9 @@ Generate focus_keyphrase, seo_title, and meta_description.`;
         const content = aiData.choices?.[0]?.message?.content || "";
         totalTokensEstimate += (aiData.usage?.total_tokens || 500);
 
-        // Parse JSON from response
         const jsonMatch = content.match(/\{[\s\S]*\}/);
         if (!jsonMatch) {
-          results.push({ post_id: item.post_id, status: "error", error_code: "JSON_PARSE", error_message: "Could not parse AI response as JSON" });
+          results.push({ post_id: item.post_id, status: "error", error_code: "JSON_PARSE", error_message: "Could not parse AI response" });
           continue;
         }
 
@@ -211,17 +245,17 @@ Generate focus_keyphrase, seo_title, and meta_description.`;
           ...parsed,
         });
       } catch (e) {
+        console.error(`AI exception for post ${item.post_id}:`, e);
         results.push({
           post_id: item.post_id,
           status: "error",
           error_code: "AI_EXCEPTION",
-          error_message: e instanceof Error ? e.message : "Unknown AI error",
+          error_message: "AI processing failed. Please try again.",
         });
       }
     }
 
-    // Track usage
-    const estimatedCost = (totalTokensEstimate / 1000) * 0.0001; // rough estimate
+    const estimatedCost = (totalTokensEstimate / 1000) * 0.0001;
     await supabase.from("api_usage").insert({
       user_id: userId,
       site_id,
@@ -235,7 +269,7 @@ Generate focus_keyphrase, seo_title, and meta_description.`;
     });
   } catch (e) {
     console.error("generate-seo error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+    return new Response(JSON.stringify({ error: "An internal error occurred. Please try again." }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
