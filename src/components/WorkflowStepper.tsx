@@ -7,10 +7,10 @@ type Step = {
 };
 
 const STEPS: Step[] = [
-  { label: "Analyze", description: "Scan for missing metadata" },
-  { label: "Generate", description: "Create AI suggestions" },
-  { label: "Review", description: "Approve or reject" },
-  { label: "Apply", description: "Push to WordPress" },
+  { label: "Analyze", description: "Scan site for missing metadata" },
+  { label: "Generate", description: "Create AI metadata suggestions" },
+  { label: "Review", description: "Approve or reject suggestions" },
+  { label: "Apply", description: "Push approved to WordPress" },
 ];
 
 interface WorkflowStepperProps {
