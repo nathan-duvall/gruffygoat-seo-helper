@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import { useTheme } from "@/hooks/useTheme";
 import { Moon, Sun } from "lucide-react";
+import ggLightLogin from "@/assets/gg-light-login.png";
 
 export default function Auth() {
   const { user, loading } = useAuth();
@@ -40,7 +41,7 @@ export default function Auth() {
       </Button>
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold tracking-tight">GruffyGoat SEO</CardTitle>
+          <img src={ggLightLogin} alt="GruffyGoat" className="mx-auto h-12 w-auto" />
           <CardDescription>AI-powered SEO metadata tool</CardDescription>
         </CardHeader>
         <CardContent>
