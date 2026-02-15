@@ -7,6 +7,8 @@ import { useTheme } from "@/hooks/useTheme";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import ggLight from "@/assets/gg-light.png";
+import ggDark from "@/assets/gg-dark.png";
 
 const SIDEBAR_KEY = "sidebar-collapsed";
 
@@ -114,7 +116,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       </div>
       {!collapsed && (
         <div className="px-4 py-3 border-t border-b">
-          <p className="text-[11px] font-medium text-muted-foreground">GruffyGoat SEO</p>
+          <img src={theme === "dark" ? ggDark : ggLight} alt="GruffyGoat SEO" className="h-6 w-auto" />
           <p className="text-[10px] text-muted-foreground">Version 0.1 Alpha</p>
           <p className="text-[10px] text-muted-foreground/70">Experimental – Not for production use</p>
         </div>
