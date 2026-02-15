@@ -1,8 +1,8 @@
 import { ReactNode } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { NavLink, useNavigate, useLocation } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Globe, Home, LogOut, Moon, Sun } from "lucide-react";
+import { Globe, Home, LogOut, Moon, Sun, Settings } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 
 function SidebarLink({ to, children }: { to: string; children: ReactNode }) {
@@ -42,8 +42,15 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         <nav className="flex-1 space-y-1 px-3 py-4">
           <SidebarLink to="/"><Home className="h-4 w-4" /> Welcome</SidebarLink>
           <SidebarLink to="/sites"><Globe className="h-4 w-4" /> Sites</SidebarLink>
+          <SidebarLink to="/settings"><Settings className="h-4 w-4" /> Global Settings</SidebarLink>
         </nav>
-        <div className="border-t p-3 space-y-2">
+        {/* Version footer */}
+        <div className="px-4 py-3 border-t border-b">
+          <p className="text-[11px] font-medium text-muted-foreground">GruffyGoat SEO</p>
+          <p className="text-[10px] text-muted-foreground">Version 0.1 Alpha</p>
+          <p className="text-[10px] text-muted-foreground/70">Experimental – Not for production use</p>
+        </div>
+        <div className="p-3 space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground truncate max-w-[120px]">{user?.email}</span>
             <div className="flex items-center gap-1">
