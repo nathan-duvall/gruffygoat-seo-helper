@@ -182,6 +182,11 @@ export default function ReviewQueue() {
         </div>
       </div>
 
+      <div className="flex items-center gap-2 rounded-md border border-border bg-muted/50 px-3 py-2">
+        <AlertTriangle className="h-4 w-4 text-muted-foreground shrink-0" />
+        <p className="text-xs text-muted-foreground">Metadata must be approved before applying to WordPress. Review each suggestion carefully.</p>
+      </div>
+
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="outline" onClick={() => handleApprove(selectedArr)} disabled={!selected.size}>
           <Check className="h-3.5 w-3.5" /> Approve Selected
