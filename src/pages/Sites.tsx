@@ -19,7 +19,7 @@ export default function Sites() {
 
   const fetchSites = async () => {
     if (!user) return;
-    const { data, error } = await supabase.from("sites").select("*").order("created_at", { ascending: false });
+    const { data, error } = await supabase.from("sites_safe" as any).select("*").order("created_at", { ascending: false });
     if (error) toast.error(error.message);
     else setSites(data || []);
     setLoading(false);
