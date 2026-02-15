@@ -99,7 +99,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       </div>
 
       {/* Nav */}
-      <nav className={cn("flex-1 space-y-1 py-4", collapsed ? "px-0 flex flex-col items-center" : "px-3")}>
+      <nav className={cn("flex-1 py-4", collapsed ? "px-0 flex flex-col items-center space-y-2" : "px-3 space-y-1")}>
         <TooltipProvider delayDuration={0}>
           <SidebarLink to="/" icon={<Home className="h-4 w-4 shrink-0" />} label="Welcome" collapsed={collapsed} />
           <SidebarLink to="/sites" icon={<Globe className="h-4 w-4 shrink-0" />} label="Sites" collapsed={collapsed} />
