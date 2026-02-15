@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTheme, ThemeMode } from "@/hooks/useTheme";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -12,11 +13,14 @@ import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import { Loader2, Save, AlertTriangle } from "lucide-react";
 
+type AiReadDepth = "standard" | "extended" | "deep";
+
 interface GlobalSettings {
   theme: ThemeMode;
   default_content_scope: "posts" | "pages" | "both";
   default_batch_size: number;
   ai_strategy: string;
+  ai_read_depth: AiReadDepth;
   strict_conflict_mode: boolean;
 }
 
@@ -25,6 +29,7 @@ const DEFAULT_SETTINGS: GlobalSettings = {
   default_content_scope: "both",
   default_batch_size: 5,
   ai_strategy: "balanced",
+  ai_read_depth: "standard",
   strict_conflict_mode: true,
 };
 
@@ -194,6 +199,42 @@ export default function GlobalSettingsPage() {
               </Label>
             </div>
           </RadioGroup>
+
+          <div className="border-t pt-6 mt-6 space-y-2">
+            <p className="text-sm font-medium">AI Content Read Depth</p>
+            <p className="text-xs text-muted-foreground">
+              Controls how many characters of the post/page content are sent to the AI when generating metadata.
+            </p>
+            <Select
+              value={settings.ai_read_depth}
+              onValueChange={(v) => updateField("ai_read_depth", v as AiReadDepth)}
+            >
+              <SelectTrigger className="w-full max-w-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="standard">Standard (2,000 characters)</SelectItem>
+                <SelectItem value="extended">Extended (4,000 characters)</SelectItem>
+                <SelectItem value="deep">Deep (8,000 characters)</SelectItem>
+              </SelectContent>
+            </Select>
+            {settings.ai_read_depth === "extended" && (
+              <div className="flex items-start gap-2 rounded-md border border-yellow-500/30 bg-yellow-500/5 p-3 mt-2">
+                <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mt-0.5 shrink-0" />
+                <p className="text-xs text-yellow-700 dark:text-yellow-300">
+                  Sends more of the article to the AI. May increase cost and response time.
+                </p>
+              </div>
+            )}
+            {settings.ai_read_depth === "deep" && (
+              <div className="flex items-start gap-2 rounded-md border border-yellow-500/30 bg-yellow-500/5 p-3 mt-2">
+                <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mt-0.5 shrink-0" />
+                <p className="text-xs text-yellow-700 dark:text-yellow-300">
+                  Sends a large portion of the article to the AI. This may significantly increase cost and could cause edge function or WordPress timeouts. Use with caution.
+                </p>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 

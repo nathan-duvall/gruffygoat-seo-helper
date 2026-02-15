@@ -11,6 +11,9 @@ const corsHeaders = {
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const VALID_SEO_PLUGINS = ["yoast", "rankmath"];
 const MAX_ITEMS = 50;
+const READ_DEPTH_MAP: Record<string, number> = { standard: 2000, extended: 4000, deep: 8000 };
+const MAX_READ_DEPTH = 8000;
+const DEFAULT_READ_DEPTH = 2000;
 
 function validateUUID(id: unknown): id is string {
   return typeof id === "string" && UUID_REGEX.test(id);
@@ -137,6 +140,14 @@ serve(async (req) => {
 
     const { items, site_id, seo_plugin, existing_suggestions } = await req.json();
 
+    // Fetch user's ai_read_depth setting
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("global_settings")
+      .eq("user_id", userId)
+      .single();
+    const rawDepth = (profileData?.global_settings as any)?.ai_read_depth || "standard";
+    const contentReadDepth = Math.min(READ_DEPTH_MAP[rawDepth] || DEFAULT_READ_DEPTH, MAX_READ_DEPTH);
     // --- Validate inputs ---
     if (!validateUUID(site_id)) return badRequest("Invalid site_id format.");
     if (typeof seo_plugin !== "string" || !VALID_SEO_PLUGINS.includes(seo_plugin)) {
@@ -178,7 +189,7 @@ serve(async (req) => {
         continue;
       }
 
-      const contentDigest = cleanContent.substring(0, 2000);
+      const contentDigest = cleanContent.substring(0, contentReadDepth);
       const seedNote = item.seed_keyword ? `\nSeed keyword provided by user: "${String(item.seed_keyword).substring(0, 100)}"` : "";
       const existingNote = existing_suggestions?.length
         ? `\nExisting keyphrases/titles in this batch (avoid duplicates): ${JSON.stringify(existing_suggestions.slice(0, 100).map((s: any) => ({ focus: s.suggested_focus, title: s.suggested_title })))}`
