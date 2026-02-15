@@ -107,11 +107,14 @@ serve(async (req) => {
 
       const allItems: any[] = [];
 
+      const MAX_PAGES = 2;
+      const PER_PAGE = 20;
+
       for (const postType of ["posts", "pages"]) {
         let page = 1;
         let hasMore = true;
-        while (hasMore) {
-          const resp = await wpFetch(creds, `/wp/v2/${postType}?per_page=100&page=${page}&context=edit&status=publish`);
+        while (hasMore && page <= MAX_PAGES) {
+          const resp = await wpFetch(creds, `/wp/v2/${postType}?per_page=${PER_PAGE}&page=${page}&context=edit&status=publish`);
           if (!resp.ok) break;
           const items = await resp.json();
           if (items.length === 0) break;
