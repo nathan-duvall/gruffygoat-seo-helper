@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.site-management]
 verify_jwt = false
+
+[functions.migrate-passwords]
+verify_jwt = false
