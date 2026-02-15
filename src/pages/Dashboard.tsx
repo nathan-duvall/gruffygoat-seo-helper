@@ -22,6 +22,7 @@ export default function Dashboard() {
   const [generating, setGenerating] = useState(false);
   const [scanResults, setScanResults] = useState<any[] | null>(null);
   const [dryRun, setDryRun] = useState(false);
+  const [contentScope, setContentScope] = useState<"posts" | "pages" | "both">("both");
   const [stats, setStats] = useState({ missingTitles: 0, missingDescs: 0, missingFocus: 0, suggestions: 0 });
   const [usage, setUsage] = useState({ totalCalls: 0, totalTokens: 0, totalCost: 0 });
 
@@ -54,7 +55,7 @@ export default function Dashboard() {
     if (!siteId) return;
     setScanning(true);
     try {
-      const result = await scanSite(siteId);
+      const result = await scanSite(siteId, contentScope);
       setScanResults(result.items);
       const titleKey = site?.seo_plugin === "yoast" ? "_yoast_wpseo_title" : "rank_math_title";
       const descKey = site?.seo_plugin === "yoast" ? "_yoast_wpseo_metadesc" : "rank_math_description";
@@ -172,7 +173,24 @@ export default function Dashboard() {
             <CardTitle className="text-base">Step 1: Analyze Your Site</CardTitle>
             <CardDescription>Scan your WordPress site to detect posts and pages with missing SEO metadata.</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Content Type</p>
+              <RadioGroup value={contentScope} onValueChange={(v) => setContentScope(v as "posts" | "pages" | "both")} className="flex flex-wrap gap-3">
+                <div className="flex items-center gap-2 rounded-md border px-3 py-2">
+                  <RadioGroupItem value="posts" id="scope-posts" />
+                  <Label htmlFor="scope-posts" className="text-sm cursor-pointer">Posts</Label>
+                </div>
+                <div className="flex items-center gap-2 rounded-md border px-3 py-2">
+                  <RadioGroupItem value="pages" id="scope-pages" />
+                  <Label htmlFor="scope-pages" className="text-sm cursor-pointer">Pages</Label>
+                </div>
+                <div className="flex items-center gap-2 rounded-md border px-3 py-2">
+                  <RadioGroupItem value="both" id="scope-both" />
+                  <Label htmlFor="scope-both" className="text-sm cursor-pointer">Posts + Pages</Label>
+                </div>
+              </RadioGroup>
+            </div>
             <Button onClick={handleScan} disabled={scanning}>
               {scanning ? <><Loader2 className="h-4 w-4 animate-spin" /> Analyzing...</> : <><Search className="h-4 w-4" /> Analyze Site</>}
             </Button>
@@ -274,7 +292,24 @@ export default function Dashboard() {
             <CardTitle className="text-base">Continue Analyzing</CardTitle>
             <CardDescription>Run another scan to find additional items with missing metadata.</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Content Type</p>
+              <RadioGroup value={contentScope} onValueChange={(v) => setContentScope(v as "posts" | "pages" | "both")} className="flex flex-wrap gap-3">
+                <div className="flex items-center gap-2 rounded-md border px-3 py-2">
+                  <RadioGroupItem value="posts" id="scope-posts-2" />
+                  <Label htmlFor="scope-posts-2" className="text-sm cursor-pointer">Posts</Label>
+                </div>
+                <div className="flex items-center gap-2 rounded-md border px-3 py-2">
+                  <RadioGroupItem value="pages" id="scope-pages-2" />
+                  <Label htmlFor="scope-pages-2" className="text-sm cursor-pointer">Pages</Label>
+                </div>
+                <div className="flex items-center gap-2 rounded-md border px-3 py-2">
+                  <RadioGroupItem value="both" id="scope-both-2" />
+                  <Label htmlFor="scope-both-2" className="text-sm cursor-pointer">Posts + Pages</Label>
+                </div>
+              </RadioGroup>
+            </div>
             <Button variant="outline" onClick={handleScan} disabled={scanning}>
               {scanning ? <><Loader2 className="h-4 w-4 animate-spin" /> Analyzing...</> : <><Search className="h-4 w-4" /> Analyze Site</>}
             </Button>

@@ -97,7 +97,7 @@ serve(async (req) => {
     }
 
     if (action === "scan") {
-      const { site_id } = params;
+      const { site_id, content_scope } = params;
       const site = await getSiteCredentials(supabase, site_id, userId);
       const creds: SiteCredentials = { base_url: site.base_url, username: site.username, app_password: site.app_password };
 
@@ -110,7 +110,10 @@ serve(async (req) => {
       const MAX_PAGES = 2;
       const PER_PAGE = 20;
 
-      for (const postType of ["posts", "pages"]) {
+      const scope = content_scope || "both";
+      const postTypes = scope === "posts" ? ["posts"] : scope === "pages" ? ["pages"] : ["posts", "pages"];
+
+      for (const postType of postTypes) {
         let page = 1;
         let hasMore = true;
         while (hasMore && page <= MAX_PAGES) {
