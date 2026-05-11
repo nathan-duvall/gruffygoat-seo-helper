@@ -205,6 +205,93 @@ export default function Strategy() {
 
       <Card>
         <CardHeader>
+          <CardTitle className="text-base">Need help getting started?</CardTitle>
+          <CardDescription>
+            If the client hasn't shared strategy details yet, generate suggested context from a few inputs. Review and edit before saving.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button onClick={handleOpenGenerate} variant="outline">
+            <Sparkles className="h-4 w-4" /> Generate Suggested Strategy
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Dialog open={genOpen} onOpenChange={(o) => !generating && setGenOpen(o)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Generate Suggested Strategy</DialogTitle>
+            <DialogDescription>
+              Provide any details you have. The AI will draft a starting point you can review and edit.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Seed keywords</Label>
+              <MultiTagInput
+                value={seedKeywords}
+                onChange={setSeedKeywords}
+                placeholder="Optional. Add any keywords the client mentioned."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="gen_location">Primary location</Label>
+              <Input
+                id="gen_location"
+                value={genLocation}
+                onChange={(e) => setGenLocation(e.target.value)}
+                placeholder="Optional"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="gen_industry">Industry hint</Label>
+              <Input
+                id="gen_industry"
+                value={genIndustry}
+                onChange={(e) => setGenIndustry(e.target.value)}
+                placeholder="e.g., dentistry, law firm, B2B SaaS"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setGenOpen(false)} disabled={generating}>
+              Cancel
+            </Button>
+            <Button onClick={handleGenerate} disabled={generating}>
+              {generating ? <><Loader2 className="h-4 w-4 animate-spin" /> Generating...</> : <><Sparkles className="h-4 w-4" /> Generate</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!confirmReplace} onOpenChange={(o) => !o && setConfirmReplace(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Replace existing strategy with AI suggestions?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your current form fields will be overwritten with the generated values. You can still edit before saving.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (confirmReplace) {
+                  applyGenerated(confirmReplace);
+                  toast.success("Suggested strategy applied. Review and save.");
+                }
+                setConfirmReplace(null);
+              }}
+            >
+              Yes, replace
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Card>
+        <CardHeader>
           <CardTitle className="text-base">Business Context</CardTitle>
           <CardDescription>Who the business is and where it operates.</CardDescription>
         </CardHeader>
