@@ -12,7 +12,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { ArrowLeft, Search, Sparkles, FileText, Loader2, ArrowRight, Settings, Info } from "lucide-react";
+import { ArrowLeft, Search, Sparkles, FileText, Loader2, ArrowRight, Settings, Info, Compass } from "lucide-react";
 import WorkflowStepper from "@/components/WorkflowStepper";
 
 export default function Dashboard() {
@@ -159,6 +159,9 @@ export default function Dashboard() {
           <h2 className="text-2xl font-bold tracking-tight">{site.site_name}</h2>
           <p className="text-sm text-muted-foreground">{site.base_url}</p>
         </div>
+        <Button variant="outline" onClick={() => navigate(`/site/${siteId}/strategy`)}>
+          <Compass className="h-4 w-4" /> Strategy
+        </Button>
         <Dialog>
           <DialogTrigger asChild>
             <Button variant="outline" size="icon"><Settings className="h-4 w-4" /></Button>
