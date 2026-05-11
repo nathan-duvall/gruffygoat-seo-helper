@@ -48,6 +48,71 @@ export default function Strategy() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<StrategyForm>(emptyForm);
+  const [genOpen, setGenOpen] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [confirmReplace, setConfirmReplace] = useState<null | StrategyForm>(null);
+  const [seedKeywords, setSeedKeywords] = useState<string[]>([]);
+  const [genLocation, setGenLocation] = useState("");
+  const [genIndustry, setGenIndustry] = useState("");
+
+  const formHasContent = (f: StrategyForm): boolean => {
+    return Boolean(
+      f.business_name || f.industry || f.primary_location || f.target_audience || f.brand_voice || f.notes ||
+      f.service_area.length || f.target_keywords.length || f.target_topics.length ||
+      f.preferred_phrases.length || f.do_not_use_phrases.length
+    );
+  };
+
+  const applyGenerated = (data: any) => {
+    setForm({
+      business_name: data.business_name ?? "",
+      industry: data.industry ?? "",
+      primary_location: data.primary_location ?? "",
+      service_area: Array.isArray(data.service_area) ? data.service_area : [],
+      target_audience: data.target_audience ?? "",
+      brand_voice: data.brand_voice ?? "",
+      target_keywords: Array.isArray(data.target_keywords) ? data.target_keywords : [],
+      target_topics: Array.isArray(data.target_topics) ? data.target_topics : [],
+      preferred_phrases: Array.isArray(data.preferred_phrases) ? data.preferred_phrases : [],
+      do_not_use_phrases: Array.isArray(data.do_not_use_phrases) ? data.do_not_use_phrases : [],
+      notes: data.notes ?? "",
+    });
+  };
+
+  const handleOpenGenerate = () => {
+    setSeedKeywords([]);
+    setGenLocation(form.primary_location || "");
+    setGenIndustry("");
+    setGenOpen(true);
+  };
+
+  const handleGenerate = async () => {
+    if (!siteId) return;
+    setGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-strategy", {
+        body: {
+          site_id: siteId,
+          seed_keywords: seedKeywords,
+          location: genLocation,
+          industry_hint: genIndustry,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      setGenOpen(false);
+      if (formHasContent(form)) {
+        setConfirmReplace(data);
+      } else {
+        applyGenerated(data);
+        toast.success("Suggested strategy applied. Review and save.");
+      }
+    } catch (e) {
+      toast.error("Could not generate strategy. Try again or fill in manually.");
+    }
+    setGenerating(false);
+  };
 
   useEffect(() => {
     if (!user || !siteId) return;
