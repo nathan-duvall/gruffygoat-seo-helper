@@ -42,6 +42,28 @@ function isLikelyNonEnglish(text: string): boolean {
   return nonLatinRatio > 0.3;
 }
 
+function buildSiteContextBlock(s: any | null | undefined): string {
+  if (!s) return "";
+  const lines: string[] = [];
+  const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : "");
+  const arr = (v: unknown) => (Array.isArray(v) ? v.filter((x) => typeof x === "string" && x.trim()) : []);
+
+  if (str(s.business_name)) lines.push(`Business: ${str(s.business_name)}`);
+  if (str(s.industry)) lines.push(`Industry: ${str(s.industry)}`);
+  if (str(s.primary_location)) lines.push(`Primary location: ${str(s.primary_location)}`);
+  if (arr(s.service_area).length) lines.push(`Service area: ${arr(s.service_area).join(", ")}`);
+  if (str(s.target_audience)) lines.push(`Target audience: ${str(s.target_audience)}`);
+  if (str(s.brand_voice)) lines.push(`Brand voice: ${str(s.brand_voice)}`);
+  if (arr(s.target_keywords).length) lines.push(`Target keywords (what this site wants to rank for): ${arr(s.target_keywords).join(", ")}`);
+  if (arr(s.target_topics).length) lines.push(`Target topics: ${arr(s.target_topics).join(", ")}`);
+  if (arr(s.preferred_phrases).length) lines.push(`Preferred phrases: ${arr(s.preferred_phrases).join(", ")}`);
+  if (arr(s.do_not_use_phrases).length) lines.push(`Do not use these phrases: ${arr(s.do_not_use_phrases).join(", ")}`);
+  if (str(s.notes)) lines.push(`Additional notes: ${str(s.notes)}`);
+
+  if (lines.length === 0) return "";
+  return `## Site Context\n\n${lines.join("\n\n")}`;
+}
+
 const SEO_SYSTEM_PROMPT = `You are a senior SEO strategist and technical QA lead.
 
 You generate metadata with the rigor of an experienced agency reviewer.
