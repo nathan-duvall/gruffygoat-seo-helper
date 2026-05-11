@@ -7,7 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Info, Loader2, Save } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { ArrowLeft, Info, Loader2, Save, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import MultiTagInput from "@/components/MultiTagInput";
 
@@ -46,6 +48,71 @@ export default function Strategy() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<StrategyForm>(emptyForm);
+  const [genOpen, setGenOpen] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [confirmReplace, setConfirmReplace] = useState<null | StrategyForm>(null);
+  const [seedKeywords, setSeedKeywords] = useState<string[]>([]);
+  const [genLocation, setGenLocation] = useState("");
+  const [genIndustry, setGenIndustry] = useState("");
+
+  const formHasContent = (f: StrategyForm): boolean => {
+    return Boolean(
+      f.business_name || f.industry || f.primary_location || f.target_audience || f.brand_voice || f.notes ||
+      f.service_area.length || f.target_keywords.length || f.target_topics.length ||
+      f.preferred_phrases.length || f.do_not_use_phrases.length
+    );
+  };
+
+  const applyGenerated = (data: any) => {
+    setForm({
+      business_name: data.business_name ?? "",
+      industry: data.industry ?? "",
+      primary_location: data.primary_location ?? "",
+      service_area: Array.isArray(data.service_area) ? data.service_area : [],
+      target_audience: data.target_audience ?? "",
+      brand_voice: data.brand_voice ?? "",
+      target_keywords: Array.isArray(data.target_keywords) ? data.target_keywords : [],
+      target_topics: Array.isArray(data.target_topics) ? data.target_topics : [],
+      preferred_phrases: Array.isArray(data.preferred_phrases) ? data.preferred_phrases : [],
+      do_not_use_phrases: Array.isArray(data.do_not_use_phrases) ? data.do_not_use_phrases : [],
+      notes: data.notes ?? "",
+    });
+  };
+
+  const handleOpenGenerate = () => {
+    setSeedKeywords([]);
+    setGenLocation(form.primary_location || "");
+    setGenIndustry("");
+    setGenOpen(true);
+  };
+
+  const handleGenerate = async () => {
+    if (!siteId) return;
+    setGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-strategy", {
+        body: {
+          site_id: siteId,
+          seed_keywords: seedKeywords,
+          location: genLocation,
+          industry_hint: genIndustry,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      setGenOpen(false);
+      if (formHasContent(form)) {
+        setConfirmReplace(data);
+      } else {
+        applyGenerated(data);
+        toast.success("Suggested strategy applied. Review and save.");
+      }
+    } catch (e) {
+      toast.error("Could not generate strategy. Try again or fill in manually.");
+    }
+    setGenerating(false);
+  };
 
   useEffect(() => {
     if (!user || !siteId) return;
@@ -135,6 +202,93 @@ export default function Strategy() {
           This context is used in every AI generation call for this site. Empty fields are skipped — fill in only what's relevant.
         </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Need help getting started?</CardTitle>
+          <CardDescription>
+            If the client hasn't shared strategy details yet, generate suggested context from a few inputs. Review and edit before saving.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button onClick={handleOpenGenerate} variant="outline">
+            <Sparkles className="h-4 w-4" /> Generate Suggested Strategy
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Dialog open={genOpen} onOpenChange={(o) => !generating && setGenOpen(o)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Generate Suggested Strategy</DialogTitle>
+            <DialogDescription>
+              Provide any details you have. The AI will draft a starting point you can review and edit.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Seed keywords</Label>
+              <MultiTagInput
+                value={seedKeywords}
+                onChange={setSeedKeywords}
+                placeholder="Optional. Add any keywords the client mentioned."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="gen_location">Primary location</Label>
+              <Input
+                id="gen_location"
+                value={genLocation}
+                onChange={(e) => setGenLocation(e.target.value)}
+                placeholder="Optional"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="gen_industry">Industry hint</Label>
+              <Input
+                id="gen_industry"
+                value={genIndustry}
+                onChange={(e) => setGenIndustry(e.target.value)}
+                placeholder="e.g., dentistry, law firm, B2B SaaS"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setGenOpen(false)} disabled={generating}>
+              Cancel
+            </Button>
+            <Button onClick={handleGenerate} disabled={generating}>
+              {generating ? <><Loader2 className="h-4 w-4 animate-spin" /> Generating...</> : <><Sparkles className="h-4 w-4" /> Generate</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!confirmReplace} onOpenChange={(o) => !o && setConfirmReplace(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Replace existing strategy with AI suggestions?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your current form fields will be overwritten with the generated values. You can still edit before saving.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (confirmReplace) {
+                  applyGenerated(confirmReplace);
+                  toast.success("Suggested strategy applied. Review and save.");
+                }
+                setConfirmReplace(null);
+              }}
+            >
+              Yes, replace
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Card>
         <CardHeader>
