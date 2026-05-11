@@ -137,6 +137,78 @@ export type Database = {
           },
         ]
       }
+      site_strategies: {
+        Row: {
+          brand_voice: string | null
+          business_name: string | null
+          created_at: string
+          do_not_use_phrases: string[]
+          id: string
+          industry: string | null
+          notes: string | null
+          preferred_phrases: string[]
+          primary_location: string | null
+          service_area: string[]
+          site_id: string
+          target_audience: string | null
+          target_keywords: string[]
+          target_topics: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          brand_voice?: string | null
+          business_name?: string | null
+          created_at?: string
+          do_not_use_phrases?: string[]
+          id?: string
+          industry?: string | null
+          notes?: string | null
+          preferred_phrases?: string[]
+          primary_location?: string | null
+          service_area?: string[]
+          site_id: string
+          target_audience?: string | null
+          target_keywords?: string[]
+          target_topics?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          brand_voice?: string | null
+          business_name?: string | null
+          created_at?: string
+          do_not_use_phrases?: string[]
+          id?: string
+          industry?: string | null
+          notes?: string | null
+          preferred_phrases?: string[]
+          primary_location?: string | null
+          service_area?: string[]
+          site_id?: string
+          target_audience?: string | null
+          target_keywords?: string[]
+          target_topics?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_strategies_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: true
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_strategies_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: true
+            referencedRelation: "sites_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sites: {
         Row: {
           app_password_encrypted: string
