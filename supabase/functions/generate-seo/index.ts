@@ -42,6 +42,28 @@ function isLikelyNonEnglish(text: string): boolean {
   return nonLatinRatio > 0.3;
 }
 
+function buildSiteContextBlock(s: any | null | undefined): string {
+  if (!s) return "";
+  const lines: string[] = [];
+  const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : "");
+  const arr = (v: unknown) => (Array.isArray(v) ? v.filter((x) => typeof x === "string" && x.trim()) : []);
+
+  if (str(s.business_name)) lines.push(`Business: ${str(s.business_name)}`);
+  if (str(s.industry)) lines.push(`Industry: ${str(s.industry)}`);
+  if (str(s.primary_location)) lines.push(`Primary location: ${str(s.primary_location)}`);
+  if (arr(s.service_area).length) lines.push(`Service area: ${arr(s.service_area).join(", ")}`);
+  if (str(s.target_audience)) lines.push(`Target audience: ${str(s.target_audience)}`);
+  if (str(s.brand_voice)) lines.push(`Brand voice: ${str(s.brand_voice)}`);
+  if (arr(s.target_keywords).length) lines.push(`Target keywords (what this site wants to rank for): ${arr(s.target_keywords).join(", ")}`);
+  if (arr(s.target_topics).length) lines.push(`Target topics: ${arr(s.target_topics).join(", ")}`);
+  if (arr(s.preferred_phrases).length) lines.push(`Preferred phrases: ${arr(s.preferred_phrases).join(", ")}`);
+  if (arr(s.do_not_use_phrases).length) lines.push(`Do not use these phrases: ${arr(s.do_not_use_phrases).join(", ")}`);
+  if (str(s.notes)) lines.push(`Additional notes: ${str(s.notes)}`);
+
+  if (lines.length === 0) return "";
+  return `## Site Context\n\n${lines.join("\n\n")}`;
+}
+
 const SEO_SYSTEM_PROMPT = `You are a senior SEO strategist and technical QA lead.
 
 You generate metadata with the rigor of an experienced agency reviewer.
@@ -54,6 +76,20 @@ Your recommendations must align with Google's documented guidance and modern sea
 - E-E-A-T considerations
 - CTR optimization without clickbait
 - Risk-aware, non-spammy language
+
+When site context is provided under a "## Site Context" heading:
+
+- Treat target keywords as the client's stated ranking intent. The focus keyphrase should align with or extend these when the content supports it. If the content does not support any stated target keyword, choose a focus keyphrase that fits the content and note the divergence in the warnings array.
+
+- Reflect the stated brand voice and use preferred phrases when natural. Never include any phrase listed under "Do not use these phrases."
+
+- For businesses with a primary location or service area, weave geo signals into titles and descriptions when appropriate. Do not force geo signals into clearly non-local content.
+
+- The business name and industry inform entity clarity. Use them to disambiguate generic topics when the content benefits from it.
+
+- The "Additional notes" field may contain anything relevant — read it as a strategist would.
+
+When site context is not provided, generate metadata based on content alone, as the existing rules describe.
 
 When evaluating content:
 1. Identify the true primary search intent.
@@ -169,6 +205,15 @@ serve(async (req) => {
       return badRequest("existing_suggestions must be an array.");
     }
 
+    // Fetch site strategy context (optional)
+    const { data: strategyData } = await supabase
+      .from("site_strategies")
+      .select("*")
+      .eq("site_id", site_id)
+      .maybeSingle();
+
+    const siteContextBlock = buildSiteContextBlock(strategyData);
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("AI API key not configured");
 
@@ -195,7 +240,7 @@ serve(async (req) => {
         ? `\nExisting keyphrases/titles in this batch (avoid duplicates): ${JSON.stringify(existing_suggestions.slice(0, 100).map((s: any) => ({ focus: s.suggested_focus, title: s.suggested_title })))}`
         : "";
 
-      const userPrompt = `Analyze the following content and internally determine:
+      const baseUserPrompt = `Analyze the following content and internally determine:
 - Primary search intent
 - Content type (news, roundup, service page, evergreen guide, product, blog commentary)
 
@@ -208,6 +253,10 @@ ${seedNote}${existingNote}
 
 SEO Plugin: ${seo_plugin}
 Generate focus_keyphrase, seo_title, and meta_description.`;
+
+      const userPrompt = siteContextBlock
+        ? `${siteContextBlock}\n\n${baseUserPrompt}`
+        : baseUserPrompt;
 
       try {
         const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
